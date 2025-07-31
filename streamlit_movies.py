@@ -35,7 +35,7 @@ def load_by_title(title):
 
 #Buscar película
 st.sidebar.subheader("Título de la película:")
-title_search = st.sidebar.text_input("")
+title_search = st.sidebar.text_input("Ingrese filme")
 btn_search = st.sidebar.button("Buscar")
 
 if btn_search and title_search:
