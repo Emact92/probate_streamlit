@@ -12,12 +12,25 @@ db = firestore.Client(credentials=creds, project="probate-streamlit")
 dbNames = db.collection("movies")
 
 # Carga todos los registros de Firestore, usaré cache para eficientar mi app
-@st.cache_data(ttl=900)  # cache por 15 min (esto lo podemos cambiar segun requiramos)
+@st.cache_data(ttl=600)  # cache por 15 min (esto lo podemos cambiar segun requiramos)
 def load_dataset():
-    all_docs = dbNames.stream()
-    all_data = [doc.to_dict() for doc in all_docs]
-    return pd.DataFrame(all_data)
-df_base = load_dataset()
+    try:
+        # Limitaré a sólo 6000 registros
+        all_docs = dbNames.limit(6000).stream()  
+        all_data = [doc.to_dict() for doc in all_docs]
+        return pd.DataFrame(all_data)
+
+    except ResourceExhausted:
+        st.error("Se excedió la cuota de Firestore. Intenta más tarde o revisa tu uso en Firebase Console.")
+        return pd.DataFrame()  
+
+    except RetryError:
+        st.error("Firestore no respondió a tiempo. Consulta demasiado pesada o problemas de red.")
+        return pd.DataFrame()
+
+    except Exception as e:
+        st.error(f" Error inesperado: {e}")
+        return pd.DataFrame()
 
 #Encabezado
 st.header("Netflix App")
@@ -66,7 +79,7 @@ st.sidebar.markdown("____")
 st.sidebar.subheader("Registrar nueva película")
 
 with st.sidebar.form("formulario_completo"):
-    name = st.text_input("Título de la película") 
+    name = st.text_input("Título de la película")
     director = st.text_input("Director")
     writer = st.text_input("Escritor")
     star = st.text_input("Protagonista")
@@ -81,14 +94,14 @@ with st.sidebar.form("formulario_completo"):
     votes = st.number_input("Número de votos", min_value=0)
     budget = st.number_input("Presupuesto (USD)", min_value=0)
     gross = st.number_input("Recaudación (USD)", min_value=0)
-    
+
     submit_button = st.form_submit_button("Insertar filme")
 
 #  Lógica post-formulario
 if submit_button:
     campos = [name, director, writer, star, company, country, genre, rating,
               released, year, runtime, score, votes, budget, gross]
-    
+
     if all(campos):
         # Normalizamos el título de la película para que podamos validar que no se ingrese una película registrada previamente
         id_movie = name.strip().lower().replace(" ", "_")
@@ -126,7 +139,7 @@ if submit_button:
         st.warning("😱 Por favor, completa todos los campos antes de insertar.")
 
 # Clear cache button
-st.sidebar.markdown("____") 
+st.sidebar.markdown("____")
 if st.sidebar.button("Limpiar todo"):
     st.cache_data.clear()
     st.rerun()
