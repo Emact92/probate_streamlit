@@ -12,7 +12,7 @@ db = firestore.Client(credentials=creds, project="probate-streamlit")
 dbNames = db.collection("movies")
 
 # Carga todos los registros de Firestore, usaré cache para eficientar mi app
-@st.cache_data(ttl=600)  
+@st.cache_data(ttl=86400) #Hace que no se haga una lectura de nuevo a Firebase hasta dentro de 24h para no agotar recursos de cuota
 def load_dataset():
     try:
         # Limitaré a sólo 6000 registros
